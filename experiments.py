@@ -18,6 +18,7 @@ from precision_recall import knn_precision_recall_features
 from precision_recall import ManifoldEstimator
 from utils import initialize_feature_extractor
 from utils import initialize_stylegan
+import pickle
 
 #----------------------------------------------------------------------------
 # Helper functions.
@@ -58,11 +59,15 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
     # Initialize StyleGAN generator.
     Gs = initialize_stylegan()
 
+    # --- Added to original code: save representations for evaluation --- #
+    repr_results = {}
+    # ------------------------------------------------------------------- #
+    
     metric_results = np.zeros([len(truncations), 3], dtype=np.float32)
     for i, truncation in enumerate(truncations):
         print('Truncation %g' % truncation)
         it_start = time()
-
+    
         # Calculate VGG-16 features for real images.
         print('Reading real images...')
         ref_features = np.zeros([num_images, feature_net.output_shape[1]], dtype=np.float32)
@@ -79,6 +84,7 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
             latent_batch = rnd.randn(end - begin, *Gs.input_shape[1:])
             gen_images = Gs.run(latent_batch, None, truncation_psi=truncation, truncation_cutoff=18, randomize_noise=True, output_transform=fmt)
             eval_features[begin:end] = feature_net.run(gen_images, num_gpus=num_gpus, assume_frozen=True)
+            
 
         # Calculate k-NN precision and recall.
         state = knn_precision_recall_features(ref_features, eval_features, num_gpus=num_gpus)
@@ -87,6 +93,10 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
         metric_results[i, 0] = truncation
         metric_results[i, 1] = state['precision'][0]
         metric_results[i, 2] = state['recall'][0]
+        
+        # --- Added to original code: save representations for evaluation --- #
+        repr_results[i] = {'ref_features': ref_features, 'eval_features': eval_features}
+        # ------------------------------------------------------------------- #
 
         # Print progress.
         print('Precision: %0.3f' % state['precision'][0])
@@ -96,6 +106,13 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
     # Save results.
     if save_txt:
         result_path = save_path
+        
+        # --- Added to original code: save representations for evaluation --- #
+        repr_file = os.path.join(result_path, 'stylegan_representations.pkl')
+        with open(repr_file, 'wb') as f:
+            pickle.dump(repr_results, f) 
+        # ------------------------------------------------------------------- #
+        
         result_file = os.path.join(result_path, 'stylegan_truncation.txt')
         header = 'truncation_psi,precision,recall'
         np.savetxt(result_file, metric_results, header=header,
