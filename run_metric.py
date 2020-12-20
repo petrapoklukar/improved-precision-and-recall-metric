@@ -27,8 +27,8 @@ realism_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, num_gen_ima
                                  truncation=1.0, save_images=True, save_path=SAVE_PATH, num_gpus=1,
                                  random_seed=123456)
 
-truncation_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, truncations=[1.0, 0.7, 0.3],
-                                    save_txt=True, save_path=SAVE_PATH, num_gpus=1, random_seed=1234)
+truncation_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, truncations=[1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0],
+                                    save_txt=True, save_path=SAVE_PATH, num_gpus=2, random_seed=1234)
 
 #----------------------------------------------------------------------------
 # Minimal CLI.
