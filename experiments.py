@@ -95,7 +95,7 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
         metric_results[i, 2] = state['recall'][0]
         
         # --- Added to original code: save representations for evaluation --- #
-        repr_results[i] = {'ref_features': ref_features, 'eval_features': eval_features}
+        repr_results[truncation] = {'ref_features': ref_features, 'eval_features': eval_features}
         # ------------------------------------------------------------------- #
 
         # Print progress.
@@ -103,16 +103,16 @@ def compute_stylegan_truncation(datareader, minibatch_size, num_images, truncati
         print('Recall: %0.3f' % state['recall'][0])
         print('Iteration time: %gs\n' % (time() - it_start))
 
+    # --- Added to original code: save representations for evaluation --- #
+    repr_file = os.path.join(save_path, 'stylegan_truncation_representations.pkl')
+    with open(repr_file, 'wb') as f:
+        pickle.dump(repr_results, f) 
+        print('Representations saved.\n')
+    # ------------------------------------------------------------------- #
+    
     # Save results.
     if save_txt:
         result_path = save_path
-        
-        # --- Added to original code: save representations for evaluation --- #
-        repr_file = os.path.join(result_path, 'stylegan_representations.pkl')
-        with open(repr_file, 'wb') as f:
-            pickle.dump(repr_results, f) 
-        # ------------------------------------------------------------------- #
-        
         result_file = os.path.join(result_path, 'stylegan_truncation.txt')
         header = 'truncation_psi,precision,recall'
         np.savetxt(result_file, metric_results, header=header,
@@ -149,6 +149,10 @@ def compute_stylegan_realism(datareader, minibatch_size, num_images, num_gen_ima
     # Initialize StyleGAN generator.
     Gs = initialize_stylegan()
 
+    
+    # Save representations.
+    repr_results = {}
+
     # Read real images.
     print('Reading real images...')
     real_features = np.zeros([num_images, feature_net.output_shape[1]], dtype=np.float32)
@@ -172,6 +176,15 @@ def compute_stylegan_realism(datareader, minibatch_size, num_images, num_gen_ima
         gen_images = Gs.run(latent_batch, None, truncation_psi=truncation, truncation_cutoff=18, randomize_noise=True, output_transform=fmt)
         fake_features[begin:end] = feature_net.run(gen_images, num_gpus=num_gpus, assume_frozen=True)
         latents[begin:end] = latent_batch
+
+    # --- Added to original code: save representations for evaluation --- #
+    repr_results['real_features'] = real_features
+    repr_results['fake_features'] = fake_features
+    repr_file = os.path.join(result_path, 'stylegan_realism_representations.pkl')
+    with open(repr_file, 'wb') as f:
+        pickle.dump(repr_results, f) 
+        print('Representations saved.\n')
+    # ------------------------------------------------------------------- #
 
     # Estimate quality of individual samples.
     _, realism_scores = real_manifold.evaluate(fake_features, return_realism=True)

@@ -27,8 +27,8 @@ realism_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, num_gen_ima
                                  truncation=1.0, save_images=True, save_path=SAVE_PATH, num_gpus=1,
                                  random_seed=123456)
 
-truncation_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, truncations=[1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0],
-                                    save_txt=True, save_path=SAVE_PATH, num_gpus=2, random_seed=1234)
+truncation_config = dnnlib.EasyDict(minibatch_size=8, num_images=50000, truncations=[1.0],
+                                    save_txt=True, save_path=SAVE_PATH, num_gpus=1, random_seed=1234)
 
 #----------------------------------------------------------------------------
 # Minimal CLI.
@@ -58,6 +58,21 @@ def parse_command_line_arguments(args=None):
         action='store_true',
         help='Calculate realism score for StyleGAN samples. Replicates Fig. 11 from Appendix.'
     )
+    parser.add_argument(
+        '--save_path',
+        help='Absolute path to save directory.'
+    )
+    parser.add_argument(
+        '--num_images',
+        tyoe=int,
+        help='Number of image to use.'
+    )
+    parser.add_argument(
+        '--num_gpus',
+        type=int,
+        help='Number of GPUs to use.'
+    )
+
     parsed_args, _ = parser.parse_known_args(args)
     return parsed_args
 
@@ -76,10 +91,16 @@ def main(args=None):
                                prefetch_mb=100, max_label_size='full', verbose=True)
 
     if parsed_args.realism_score:  # Compute realism score.
+        realism_config.save_path = parsed_args.save_path
+        realism_config.num_images = parsed_args.num_images
+        realism_config.num_gpus = parsed_args.num_gpus
         realism_config.datareader = dataset_obj
         compute_stylegan_realism(**realism_config)
 
     if parsed_args.truncation_sweep:  # Compute truncation sweep.
+        truncation_config.save_path = parsed_args.save_path
+        truncation_config.num_images = parsed_args.num_images
+        truncation_config.num_gpus = parsed_args.num_gpus
         truncation_config.datareader = dataset_obj
         compute_stylegan_truncation(**truncation_config)
 
